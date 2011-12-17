@@ -1,46 +1,35 @@
-require 'benchmark'
-
-class Array
-    def sum
-        self.inject{|sum,x| sum + x }
-    end
+def dist a, b
+  (0..1).to_a.map{ |i| (a[i] - b[i]).abs }.max
 end
+
+n = gets.to_i
+#n = 100000
 
 houses = []
-paths = []
-#n = 10000#gets.to_i
-n = 4
-#i_houses = Array.new(n){[rand(1000000000), rand(1000000000)]}
-i_houses = [[0,0],[3,4],[1,3],[1,2]]
 
-puts 'Start!'
-tm = Benchmark.measure do
-  min_dist = 0
+sum_x = 0
+sum_y = 0
 
-  n.times do |i|
-    house =  i_houses[i] #gets.split.map{|coords| coords.to_i }
-    max_edge = [1,2].map {|i| [max_edge[i], house[i]].max }
-    min_edge = [1,2].map {|i| [min_edge[i], house[i]].max }
-    if !edge || house == edge
+n.times do |i|
+  house =  gets.split.map{|coords| coords.to_i }
+  #house =  [rand(10**9), rand(10**9)]#gets.split.map{|coords| coords.to_i }
 
-    dist = [(to_m[0] - house[0]).abs,(to_m[1] - house[1]).abs].max
-    path_to_add = 0
-    min_dist = nil
+  sum_x += house[0]
+  sum_y += house[1]
 
-    houses.each_with_index { |to_m, i|
-      dist = [(to_m[0] - house[0]).abs,(to_m[1] - house[1]).abs].max
-      d = paths[i] += dist
-      #min_dist = d if min_dist && min_dist > d
-
-      path_to_add += dist
-    }
-
-    houses << house
-    paths << path_to_add
-  end
-
-  p paths
-  puts paths.min
-  #puts min_dist
+  houses << house
 end
-puts "Time: #{tm}"
+
+center = [sum_x / n, sum_y / n]
+
+selected_houses = houses.sort do |a,b|
+  dist(a,center) <=> dist(b, center)
+end
+
+selected_houses = selected_houses[0..3]
+
+paths = selected_houses.map do |house|
+  houses.inject(0) { |a, meeting| a + dist(meeting, house) }
+end
+
+puts paths.min
