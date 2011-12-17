@@ -1,10 +1,14 @@
 $:.unshift File.dirname(__FILE__)
 require 'benchmark'
 
-puts 'Start!'
-
-tm = Benchmark.measure do
-  require 'meeting_point'
+module Kernel
+  def puts *args
+  end
 end
 
-puts "Time: #{tm}"
+Benchmark.bm do |x|
+  x.report("10000") {
+    ARGV << '10000.case'
+    require 'meeting_point'
+  }
+end
