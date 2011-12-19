@@ -12,8 +12,6 @@ class String
 end
 
 class SimpleSpellChecker
-  THRESHOLD = 0.5
-
   attr_reader :index
 
   def initialize vocalabruary_path = '/usr/share/dict/words'
