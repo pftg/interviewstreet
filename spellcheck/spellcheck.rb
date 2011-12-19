@@ -2,8 +2,6 @@ require 'rubygems'
 require 'text'
 
 class String
-  @@white_similarity = Text::WhiteSimilarity.new
-
   def each_qgram q = 2, &block
     (self.length - (q - 1)).times {|i| yield self[i .. i + q - 1].downcase }
   end
@@ -30,8 +28,7 @@ class SpellChecker
     @index = {}
     @dictionary = File.new(path).readlines
     dictionary.each_with_index do |word, i|
-      word.strip!
-      word.to_qgram.uniq.each do |gram|
+      word.strip.downcase.to_qgram.uniq.each do |gram|
         indexes = @index[gram] ||= []
         indexes << i
       end
@@ -85,6 +82,8 @@ if __FILE__ == $0
 
   begin
     print "> "
-    puts spellchecker.suggest (gets || "").strip
+    user_input = (gets || "").strip
+    break if user_input == "[exit]"
+    puts spellchecker.suggest user_input
   end while true
 end
