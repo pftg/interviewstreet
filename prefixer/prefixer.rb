@@ -14,6 +14,10 @@ def operator_left_assoc c
     end
 end
 
+def ident? token
+  token.match /\d+|\w+/
+end
+
 OPERATORS = %w(+ - * / % !)
 
 def opertaor? token
@@ -34,7 +38,7 @@ def shunting_yard str
       right_brace = operation_stack.rindex('(')
       output += operation_stack[right_brace + 1..-1].reverse
       operation_stack = operation_stack[0 ... right_brace]
-    when /\d+/ then output << token
+    when /\d+|\w+/ then output << token
     when /[+-\\*\\%\/^]/ then
       ops = operation_stack.reverse.take_while do |op|
         op_preced = operator_preced(op)
@@ -58,4 +62,4 @@ def shunting_yard str
 end
 
 
-p shunting_yard "3 + 4 * 2 / ( 1 - 5 ) ^ 2 ^ 3"
+rpn_expr = shunting_yard "3 + 4 * 2 / ( 1 - 5 ) ^ 2 ^ 3"
