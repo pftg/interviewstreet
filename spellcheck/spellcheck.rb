@@ -2,12 +2,8 @@ require 'rubygems'
 require 'text'
 
 class String
-  def each_qgram q = 2, &block
-    (self.length - (q - 1)).times {|i| yield self[i .. i + q - 1].downcase }
-  end
-
   def to_qgram q = 2
-    (self.length - (q - 1)).times.map { |i|  self[i .. i + q - 1].downcase }
+    (self.length - (q - 1)).times.map{ |i|  self[i .. i + q - 1] }.uniq
   end
 
   def levenshtein to
@@ -16,9 +12,9 @@ class String
 end
 
 class SpellChecker
-  THRESHOLD = 0.5
+  THRESHOLD = 0.1
 
-  attr_reader :index, :dictionary
+  attr_reader :index, :dictionary, :lengths
 
   def initialize vocalabruary_path = '/usr/share/dict/words'
     index_dictionary vocalabruary_path
@@ -26,10 +22,15 @@ class SpellChecker
 
   def index_dictionary path
     @index = {}
+    @lengths = []
     @dictionary = File.new(path).readlines
     dictionary.each_with_index do |word, i|
-      word.strip.downcase.to_qgram.uniq.each do |gram|
-        indexes = @index[gram] ||= []
+      word = dictionary[i] = word.strip.downcase
+
+      lengths[i] = word.length
+
+      word.to_qgram.each do |gram|
+        indexes = @index[gram] ||=[]
         indexes << i
       end
     end
@@ -39,38 +40,15 @@ class SpellChecker
     word = word.downcase
 
     word_qgrams = word.to_qgram
+    word_pairs_size = word_qgrams.size
 
-    # Add some improvements
-    #word_qgrams += word_qgrams.map {|gram| gram.reverse }
-    #word_qgrams += word_qgrams.map {|gram| gram.gsub(/[aeiyck]/,'e' => 'a', 'a' => 'e', 'i' => 'y', 'y' => 'i', 'c' => 'k', 'k' => 'c') }
-    #word_qgrams.uniq!
     indexes = word_qgrams.map {|gram| index[gram] }
 
     candidate_words_with_freq = indexes.flatten.compact.inject(Hash.new(0)){|h,v| h[v] += 1;h }
 
-    word_id_candidates = candidate_words_with_freq.keys
+    best_match = candidate_words_with_freq.map {|w,f| [w, 2.0 * f  / (word_pairs_size + lengths[w] + 1.0).to_f] }.sort_by{|a| -1 * a.last}.first
 
-    word_id_candidates = word_id_candidates.sort_by {|a| -1 * candidate_words_with_freq[a] }#.find_all{|a| candidate_words_with_freq[a] > 1 }
-
-    word_id_candidates.empty? and return nil
-
-    word_candidates = word_id_candidates.map {|word_id| dictionary[word_id] }
-
-    return word if word_candidates.include? word
-
-    #distances = word_candidates.inject(Hash.new([])) {|h, candidate_word|
-    #  h[word.levenshtein candidate_word] += [candidate_word]
-    #  h
-    #}
-
-    #distances[distances.keys.min].sort_by {|w| (w.length - word.length).abs }
-
-    suggestion = word_candidates.min_by {|candidate_word|
-      word.levenshtein candidate_word
-    }
-
-    suggestion_distance = word.levenshtein suggestion
-    (suggestion_distance) / word.length > THRESHOLD ?  nil : suggestion
+    best_match.last > THRESHOLD ? dictionary[best_match.first] : nil
   end
 end
 
@@ -80,10 +58,17 @@ if __FILE__ == $0
   spellchecker = SpellChecker.new #File.join(File.dirname(__FILE__), 'words')
   puts "Done."
 
-  begin
-    print "> "
-    user_input = (gets || "").strip
-    break if user_input == "[exit]"
-    puts spellchecker.suggest user_input
-  end while true
+  require 'readline'
+
+  # Store the state of the terminal
+  stty_save = `stty -g`.chomp
+  trap('INT') { system('stty', stty_save); exit }
+
+  Readline.completion_append_character = " "
+  Readline.completion_proc = proc { |s| spellchecker.dictionary.grep( /^#{Regexp.escape(s)}/ ) }
+
+
+  while user_input = Readline.readline('> ', true)
+    puts spellchecker.suggest(user_input) || "NO SUGGESTION"
+  end
 end

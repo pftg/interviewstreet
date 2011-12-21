@@ -44,11 +44,17 @@ if __FILE__ == $0
   spellchecker = SimpleSpellChecker.new #File.join(File.dirname(__FILE__), 'words')
   puts "Done."
 
-  begin
-    print "> "
-    user_input = (gets || "").strip
-    break if user_input == "[exit]"
-    suggestion = spellchecker.suggest user_input
-    puts suggestion || "NO SUGGESTION"
-  end while true
+  require 'readline'
+
+  # Store the state of the terminal
+  stty_save = `stty -g`.chomp
+  trap('INT') { system('stty', stty_save); exit }
+
+  Readline.completion_append_character = " "
+  Readline.completion_proc = proc { |s| spellchecker.dictionary.grep( /^#{Regexp.escape(s)}/ ) }
+
+
+  while user_input = Readline.readline('> ', true)
+    puts spellchecker.suggest user_input
+  end
 end
